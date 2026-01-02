@@ -81,7 +81,7 @@ YOCO_SECRET_KEY=sk_test_xxxxxxxxxxxx
 
 ## Cool stuff girly-pop 💅🏾 You're ready to accept payments 🎉
 
-![Payment Success](https://media.giphy.com/media/3QwogXfR2vfZS/giphy.gif)
+![Payment Success](https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHNkeWdmODR2MDBibnZtMDk3b2FyZGJoYW1yYTZ1MWh1NzhsNGk2YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9thduMKTL4Dcc/giphy.gif)
 
 ## Storefront Integration
 
