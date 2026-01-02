@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Nolunga/medusa-payment-yoco/compare/v1.0.0...v1.0.1) (2026-01-02)
+
+
+### Bug Fixes
+
+* re-trigger release after token update ([447aca3](https://github.com/Nolunga/medusa-payment-yoco/commit/447aca3f7af6af05d6b57cbbfab921091b9a97ba))
+
 # 1.0.0 (2026-01-02)
 
 
