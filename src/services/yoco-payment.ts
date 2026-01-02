@@ -1,14 +1,27 @@
+import { AbstractPaymentProvider } from "@medusajs/framework/utils"
+import { Logger } from "@medusajs/framework/types"
 import {
-  AbstractPaymentProvider,
-  PaymentProviderError,
-  PaymentProviderSessionResponse,
-  PaymentSessionStatus,
-  CreatePaymentProviderSession,
-  UpdatePaymentProviderSession,
+  InitiatePaymentInput,
+  InitiatePaymentOutput,
+  UpdatePaymentInput,
+  UpdatePaymentOutput,
+  AuthorizePaymentInput,
+  AuthorizePaymentOutput,
+  CapturePaymentInput,
+  CapturePaymentOutput,
+  RefundPaymentInput,
+  RefundPaymentOutput,
+  CancelPaymentInput,
+  CancelPaymentOutput,
+  DeletePaymentInput,
+  DeletePaymentOutput,
+  RetrievePaymentInput,
+  RetrievePaymentOutput,
+  GetPaymentStatusInput,
+  GetPaymentStatusOutput,
   ProviderWebhookPayload,
   WebhookActionResult,
-} from "@medusajs/framework/utils"
-import { Logger } from "@medusajs/framework/types"
+} from "@medusajs/framework/types"
 import { YocoOptions, YocoCheckout, YocoRefund, YocoWebhookEvent, YocoError } from "../types"
 
 const YOCO_API = "https://payments.yoco.com/api"
@@ -32,21 +45,21 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
       throw new Error("[Yoco] Invalid secretKey format")
     }
 
-    this.log("Initialized", { mode: options.secretKey.includes("test") ? "test" : "live" })
+    this.log("Initialized")
   }
 
   // ============================================
   // HELPERS
   // ============================================
 
-  private log(msg: string, data?: unknown) {
+  private log(msg: string) {
     if (this.options_.debug) {
-      this.logger_.info(`[Yoco] ${msg}`, data ? { data } : undefined)
+      this.logger_.info(`[Yoco] ${msg}`)
     }
   }
 
   private async api<T>(endpoint: string, method = "GET", body?: object): Promise<T> {
-    this.log(`${method} ${endpoint}`, body)
+    this.log(`${method} ${endpoint}`)
 
     const res = await fetch(`${YOCO_API}${endpoint}`, {
       method,
@@ -67,48 +80,78 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
     return data as T
   }
 
-  private error(message: string, code: string): PaymentProviderError {
-    this.log(`Error: ${message}`, { code })
-    return { error: message, code }
-  }
-
-  private mapStatus(status: string): PaymentSessionStatus {
-    const map: Record<string, PaymentSessionStatus> = {
-      completed: PaymentSessionStatus.AUTHORIZED,
-      cancelled: PaymentSessionStatus.CANCELED,
-      expired: PaymentSessionStatus.ERROR,
+  private mapStatus(status: string): "authorized" | "captured" | "canceled" | "pending" {
+    const map: Record<string, "authorized" | "captured" | "canceled" | "pending"> = {
+      completed: "authorized",
+      cancelled: "canceled",
+      expired: "canceled",
     }
-    return map[status] || PaymentSessionStatus.PENDING
+    return map[status] || "pending"
   }
 
   // ============================================
   // PAYMENT METHODS
   // ============================================
 
-  async initiatePayment(
-    input: CreatePaymentProviderSession
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse> {
+  async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutput> {
     const { amount, currency_code, context } = input
 
     try {
-      const amountInCents = Math.round(amount)
+      const amountInCents = Math.round(Number(amount))
 
       if (amountInCents < 200) {
-        return this.error("Minimum amount is R2.00", "MIN_AMOUNT")
+        throw new Error("Minimum amount is R2.00")
       }
 
       if (currency_code.toUpperCase() !== "ZAR") {
-        return this.error("Only ZAR currency supported", "INVALID_CURRENCY")
+        throw new Error("Only ZAR currency supported")
       }
 
       const checkout = await this.api<YocoCheckout>("/checkouts", "POST", {
         amount: amountInCents,
         currency: "ZAR",
         metadata: {
-          session_id: context?.session_id,
-          resource_id: context?.resource_id,
+          session_id: (context as any)?.session_id,
+          resource_id: (context as any)?.resource_id,
         },
-        externalId: context?.session_id,
+        externalId: (context as any)?.session_id,
+      })
+
+      return {
+        id: checkout.id,
+        data: {
+          yocoCheckoutId: checkout.id,
+          redirectUrl: checkout.redirectUrl,
+          status: checkout.status,
+        },
+      }
+    } catch (err) {
+      throw new Error(`[Yoco] Failed to initiate payment: ${(err as Error).message}`)
+    }
+  }
+
+  async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
+    const { amount, currency_code, context } = input
+
+    try {
+      const amountInCents = Math.round(Number(amount))
+
+      if (amountInCents < 200) {
+        throw new Error("Minimum amount is R2.00")
+      }
+
+      if (currency_code.toUpperCase() !== "ZAR") {
+        throw new Error("Only ZAR currency supported")
+      }
+
+      const checkout = await this.api<YocoCheckout>("/checkouts", "POST", {
+        amount: amountInCents,
+        currency: "ZAR",
+        metadata: {
+          session_id: (context as any)?.session_id,
+          resource_id: (context as any)?.resource_id,
+        },
+        externalId: (context as any)?.session_id,
       })
 
       return {
@@ -119,34 +162,32 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
         },
       }
     } catch (err) {
-      return this.error((err as Error).message, "INIT_ERROR")
+      throw new Error(`[Yoco] Failed to update payment: ${(err as Error).message}`)
     }
   }
 
-  async updatePayment(
-    input: UpdatePaymentProviderSession
-  ): Promise<PaymentProviderError | PaymentProviderSessionResponse> {
-    return this.initiatePayment(input)
+  async deletePayment(input: DeletePaymentInput): Promise<DeletePaymentOutput> {
+    return {
+      data: input.data,
+    }
   }
 
-  async deletePayment(data: Record<string, unknown>) {
-    return { ...data, deleted: true }
-  }
-
-  async getPaymentStatus(data: Record<string, unknown>): Promise<PaymentSessionStatus> {
-    const id = data.yocoCheckoutId as string
-    if (!id) return PaymentSessionStatus.ERROR
+  async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> {
+    const id = input.data?.yocoCheckoutId as string
+    if (!id) {
+      return { status: "pending" }
+    }
 
     try {
       const checkout = await this.api<YocoCheckout>(`/checkouts/${id}`)
-      return this.mapStatus(checkout.status)
+      return { status: this.mapStatus(checkout.status) }
     } catch {
-      return PaymentSessionStatus.ERROR
+      return { status: "pending" }
     }
   }
 
-  async authorizePayment(data: Record<string, unknown>) {
-    const id = data.yocoCheckoutId as string
+  async authorizePayment(input: AuthorizePaymentInput): Promise<AuthorizePaymentOutput> {
+    const id = input.data?.yocoCheckoutId as string
 
     try {
       const checkout = await this.api<YocoCheckout>(`/checkouts/${id}`)
@@ -154,78 +195,95 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
       return {
         status: this.mapStatus(checkout.status),
         data: {
-          ...data,
+          ...input.data,
           yocoPaymentId: checkout.paymentId,
         },
       }
     } catch (err) {
-      return this.error((err as Error).message, "AUTH_ERROR")
+      throw new Error(`[Yoco] Failed to authorize payment: ${(err as Error).message}`)
     }
   }
 
-  async capturePayment(data: Record<string, unknown>) {
-    const id = data.yocoCheckoutId as string
+  async capturePayment(input: CapturePaymentInput): Promise<CapturePaymentOutput> {
+    const id = input.data?.yocoCheckoutId as string
 
     try {
       const checkout = await this.api<YocoCheckout>(`/checkouts/${id}`)
 
       if (checkout.status !== "completed") {
-        return this.error(`Payment not completed: ${checkout.status}`, "CAPTURE_ERROR")
+        throw new Error(`Payment not completed: ${checkout.status}`)
       }
 
       return {
-        ...data,
-        yocoPaymentId: checkout.paymentId,
-        capturedAt: new Date().toISOString(),
+        data: {
+          ...input.data,
+          yocoPaymentId: checkout.paymentId,
+          capturedAt: new Date().toISOString(),
+        },
       }
     } catch (err) {
-      return this.error((err as Error).message, "CAPTURE_ERROR")
+      throw new Error(`[Yoco] Failed to capture payment: ${(err as Error).message}`)
     }
   }
 
-  async refundPayment(data: Record<string, unknown>, amount: number) {
-    const id = data.yocoCheckoutId as string
+  async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentOutput> {
+    const id = input.data?.yocoCheckoutId as string
 
     if (!id) {
-      return this.error("No checkout ID", "REFUND_ERROR")
+      throw new Error("[Yoco] No checkout ID provided for refund")
     }
 
     try {
       const refund = await this.api<YocoRefund>(`/checkouts/${id}/refund`, "POST")
 
       if (refund.status !== "successful") {
-        return this.error(refund.message, "REFUND_FAILED")
+        throw new Error(refund.message)
       }
 
       return {
-        ...data,
-        yocoRefundId: refund.refundId,
-        refundedAt: new Date().toISOString(),
+        data: {
+          ...input.data,
+          yocoRefundId: refund.refundId,
+          refundedAt: new Date().toISOString(),
+        },
       }
     } catch (err) {
-      return this.error((err as Error).message, "REFUND_ERROR")
+      throw new Error(`[Yoco] Failed to refund payment: ${(err as Error).message}`)
     }
   }
 
-  async cancelPayment(data: Record<string, unknown>) {
-    return { ...data, cancelledAt: new Date().toISOString() }
+  async cancelPayment(input: CancelPaymentInput): Promise<CancelPaymentOutput> {
+    return {
+      data: {
+        ...input.data,
+        cancelledAt: new Date().toISOString(),
+      },
+    }
   }
 
-  async retrievePayment(data: Record<string, unknown>) {
-    const id = data.yocoCheckoutId as string
-    if (!id) return data
+  async retrievePayment(input: RetrievePaymentInput): Promise<RetrievePaymentOutput> {
+    const id = input.data?.yocoCheckoutId as string
+    if (!id) {
+      return { data: input.data }
+    }
 
     try {
       const checkout = await this.api<YocoCheckout>(`/checkouts/${id}`)
-      return { ...data, yocoStatus: checkout.status, yocoPaymentId: checkout.paymentId }
+      return {
+        data: {
+          ...input.data,
+          yocoStatus: checkout.status,
+          yocoPaymentId: checkout.paymentId,
+        },
+      }
     } catch (err) {
-      return this.error((err as Error).message, "RETRIEVE_ERROR")
+      throw new Error(`[Yoco] Failed to retrieve payment: ${(err as Error).message}`)
     }
   }
 
   async getWebhookActionAndData(payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> {
     const event = payload.data as unknown as YocoWebhookEvent
-    this.log(`Webhook: ${event.type}`, event)
+    this.log(`Webhook: ${event.type}`)
 
     const sessionId = (event.payload.metadata?.session_id as string) || ""
 
