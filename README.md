@@ -4,7 +4,7 @@ A payment provider for Medusa v2 that makes it easy to accept card payments in S
 
 The package handles the Yoco Checkout API flow, and provides a simple and consistent integration with Medusa's payment system. It also handles webhooks for payment confirmation, making it easy to integrate with your existing store.
 
-![Yoco Checkout](https://raw.githubusercontent.com/Nolunga/medusa-payment-yoco/main/assets/yoco-checkout.png)
+![Yoco Logo](https://raw.githubusercontent.com/Nolunga/medusa-payment-yoco/main/assets/yoco-logo-og-3.png)
 
 ## Features
 
@@ -81,7 +81,7 @@ YOCO_SECRET_KEY=sk_test_xxxxxxxxxxxx
 
 ## Cool stuff girly-pop 💅🏾 You're ready to accept payments 🎉
 
-![Payment Success]([https://media.giphy.com/media/3QwogXfR2vfZS/giphy.gif](https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDZ1bnh5ODhyMXp0MWY0NWV3cmh1Y2Qya2dlOWhoZnJ6MDlhYTg2NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/BNveGM256Lh90K1DdK/giphy.gif))
+![Payment Success](https://media.giphy.com/media/3QwogXfR2vfZS/giphy.gif)
 
 ## Storefront Integration
 
