@@ -12,6 +12,7 @@ The package handles the Yoco Checkout API flow, and provides a simple and consis
 - ✅ Webhook support for real-time payment updates
 - ✅ Full refund support
 - ✅ Test & Live mode support
+- ✅ Configurable redirect URLs for success, cancel, and failure
 - ✅ TypeScript support
 - ✅ Debug logging
 
@@ -56,6 +57,10 @@ export default defineConfig({
             options: {
               secretKey: process.env.YOCO_SECRET_KEY,
               debug: true,
+              // Optional: Configure redirect URLs after payment
+              successUrl: process.env.YOCO_SUCCESS_URL,
+              cancelUrl: process.env.YOCO_CANCEL_URL,
+              failureUrl: process.env.YOCO_FAILURE_URL,
             },
           },
         ],
@@ -70,6 +75,11 @@ export default defineConfig({
 ```env
 # Get these from Yoco Business Portal > Selling Online > Payment Gateway
 YOCO_SECRET_KEY=sk_test_xxxxxxxxxxxx
+
+# Optional: Redirect URLs after payment (recommended for production)
+YOCO_SUCCESS_URL=https://your-store.com/checkout/success
+YOCO_CANCEL_URL=https://your-store.com/checkout/cancel
+YOCO_FAILURE_URL=https://your-store.com/checkout/failure
 ```
 
 ### Enable Yoco in your region
@@ -121,10 +131,24 @@ if (type === "order") {
 
 ## Configuration Options
 
-| Option      | Type      | Required | Description                                       |
-| ----------- | --------- | -------- | ------------------------------------------------- |
-| `secretKey` | `string`  | ✅       | Your Yoco secret key (sk_test_... or sk_live_...) |
-| `debug`     | `boolean` | ❌       | Enable debug logging (default: false)             |
+| Option       | Type      | Required | Description                                                                  |
+| ------------ | --------- | -------- | ---------------------------------------------------------------------------- |
+| `secretKey`  | `string`  | ✅       | Your Yoco secret key (sk_test_... or sk_live_...)                            |
+| `debug`      | `boolean` | ❌       | Enable debug logging (default: false)                                        |
+| `successUrl` | `string`  | ❌       | URL to redirect to after successful payment                                  |
+| `cancelUrl`  | `string`  | ❌       | URL to redirect to after cancelled payment                                   |
+| `failureUrl` | `string`  | ❌       | URL to redirect to after failed payment                                      |
+
+### Redirect URLs
+
+When configured, Yoco will automatically redirect customers back to your store after completing, cancelling, or failing a payment. This provides a better user experience by seamlessly bringing customers back to your checkout flow.
+
+**Example redirect URLs:**
+- Success: `https://your-store.com/checkout/success?session_id={session_id}`
+- Cancel: `https://your-store.com/checkout/cancel?session_id={session_id}`
+- Failure: `https://your-store.com/checkout/failure?session_id={session_id}`
+
+You can access the session ID from the URL query parameter to complete the order or handle errors appropriately.
 
 ## Webhook Setup (Production)
 
