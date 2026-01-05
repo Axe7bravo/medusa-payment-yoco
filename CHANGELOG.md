@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/Nolunga/medusa-payment-yoco/compare/v1.0.1...v1.1.0) (2026-01-05)
+
+
+### Features
+
+* add support for redirect URLs after payment ([43690e0](https://github.com/Nolunga/medusa-payment-yoco/commit/43690e0f79dcfab659e30149820d21ceddaf3f87))
+
 ## [1.0.1](https://github.com/Nolunga/medusa-payment-yoco/compare/v1.0.0...v1.0.1) (2026-01-02)
 
 
