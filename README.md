@@ -164,12 +164,18 @@ For production, set up webhooks in your Yoco Business Portal:
 
 ## Test Cards
 
-| Card Number         | Result   |
-| ------------------- | -------- |
+**Test Mode Enabled:**
+
+For a successful card transaction, use:
+- **Card Number**: `4111 1111 1111 1111`
+- **CVC**: Any 3-digit number
+- **Expiry**: Any valid future date
+
+| Card Number         | Result      |
+| ------------------- | ----------- |
+| 4111 1111 1111 1111 | ✅ Success  |
 | 4000 0000 0000 0000 | ✅ Success  |
 | 4000 0000 0000 0002 | ❌ Declined |
-
-Use any future expiry date and any CVV.
 
 ## Yoco Fees
 
