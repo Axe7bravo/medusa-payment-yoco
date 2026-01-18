@@ -135,7 +135,7 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
     const { amount, currency_code, context } = input
 
     try {
-      const amountInCents = Math.round(Number(amount))
+      const amountInCents = Math.round(Number(amount) * 100);
 
       // Validate amount
       if (amountInCents < MIN_AMOUNT_CENTS) {
@@ -201,7 +201,7 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
     const { amount, currency_code, context } = input
 
     try {
-      const amountInCents = Math.round(Number(amount))
+      const amountInCents = Math.round(Number(amount) * 100);
 
       if (amountInCents < 200) {
         throw new Error("Minimum amount is R2.00")
@@ -308,7 +308,7 @@ class YocoPaymentService extends AbstractPaymentProvider<YocoOptions> {
 
   async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentOutput> {
     const id = input.data?.yocoCheckoutId as string
-    const refundAmount = input.amount ? Math.round(Number(input.amount)) : undefined
+    const refundAmount = input.amount ? Math.round(Number(input.amount)*100) : undefined
 
     if (!id) {
       throw new YocoPaymentError("[Yoco] No checkout ID provided for refund", YocoErrorCode.API_ERROR)
