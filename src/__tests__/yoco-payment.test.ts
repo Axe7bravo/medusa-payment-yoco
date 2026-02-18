@@ -128,13 +128,13 @@ describe("YocoPaymentService", () => {
         debug: false,
       })
 
-      // Mock the API method
-      ;(service as any).api = jest.fn()
+        // Mock the API method
+        ; (service as any).api = jest.fn()
     })
 
     it("should reject amounts below minimum", async () => {
       const input = {
-        amount: 100, // R1.00 - below minimum
+        amount: 1, // R1.00 - below minimum (becomes 100 cents)
         currency_code: "ZAR",
         context: {},
       }
@@ -153,3 +153,4 @@ describe("YocoPaymentService", () => {
     })
   })
 })
+
