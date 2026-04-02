@@ -119,7 +119,6 @@ async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutpu
 
     // Log this to your terminal so you can verify what is being sent
     this.logger_.info(`[Yoco] Initiating payment for ID: ${sessionId}`)
-    this.logger_.info(`[Yoco] context: ${tester}`)
 
     const checkoutPayload: any = {
       amount: amountInCents,
@@ -136,14 +135,17 @@ async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutpu
     const checkout = await this.api<YocoCheckout>("/checkouts", "POST", checkoutPayload, `init-${randomUUID()}`)
 
     return {
-      id: checkout.id,
-      status: "pending",
-      data: {
-        yocoCheckoutId: checkout.id,
-        redirectUrl: checkout.redirectUrl,
-        session_id: sessionId, // PERSIST THIS HERE
-      },
-    }
+    id: checkout.id,
+    status: "pending",
+    data: {
+    yocoCheckoutId: checkout.id,
+    redirectUrl: checkout.redirectUrl,
+    session_id: sessionId,
+    cart_id: sessionId,
+
+
+    },
+  }
   } catch (err) {
     this.logger_.error(`[Yoco] Initiation failed: ${(err as Error).message}`)
     throw err
@@ -175,12 +177,15 @@ async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
 
     return {
       data: {
-        ...data,
-        yocoCheckoutId: checkout.id,
-        redirectUrl: checkout.redirectUrl,
-        session_id: sessionId 
-      },
-    }
+      ...data,
+      yocoCheckoutId: checkout.id,
+      redirectUrl: checkout.redirectUrl,
+      session_id: sessionId,
+
+      // ✅ Persist cart correlation here too
+      cart_id: sessionId,
+    },
+  }
   } catch (err) {
     throw new Error(`[Yoco] Update failed: ${(err as Error).message}`)
   }
@@ -240,14 +245,36 @@ async updatePayment(input: UpdatePaymentInput): Promise<UpdatePaymentOutput> {
     } as unknown as RetrievePaymentOutput
   }
 
-  async getWebhookActionAndData(payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> {
-    const event = payload.data as unknown as YocoWebhookEvent
-    const sessionId = (event.payload.metadata?.session_id as string) || (event.payload as any).externalId || ""
+  async getWebhookActionAndData(
+    payload: ProviderWebhookPayload["payload"]
+  ): Promise<WebhookActionResult> {
+    const event = payload as unknown as YocoWebhookEvent
 
-    if (event.type === "payment.succeeded") {
-      return { action: "authorized", data: { session_id: sessionId, amount: event.payload.amount } }
+    if (event.type !== "payment.succeeded") {
+      return { action: "not_supported" }
     }
-    return { action: "not_supported" }
+
+    // Yoco sometimes flattens fields differently depending on event version
+    const rawPayload: any = event.payload || {}
+
+    const sessionId =
+      rawPayload.metadata?.session_id ||
+      rawPayload.externalId ||
+      rawPayload.checkoutId ||   // fallback if metadata missing
+      ""
+
+    if (!sessionId) {
+      this.logger_.error("[Yoco] Webhook missing session_id")
+      return { action: "not_supported" }
+    }
+
+    return {
+      action: "authorized",
+      data: {
+        session_id: sessionId,
+        amount: rawPayload.amount,
+      },
+    }
   }
 }
 
